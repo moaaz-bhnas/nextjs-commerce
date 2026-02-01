@@ -32,6 +32,10 @@ import {
   getProductsQuery,
 } from "./queries/product";
 import {
+  getMediaNodesQuery,
+  getShopCarouselMetafieldQuery,
+} from "./queries/shop";
+import {
   Cart,
   Collection,
   Connection,
@@ -48,6 +52,7 @@ import {
   ShopifyCollectionsOperation,
   ShopifyCreateCartOperation,
   ShopifyMenuOperation,
+  ShopifyNodesOperation,
   ShopifyPageOperation,
   ShopifyPagesOperation,
   ShopifyProduct,
@@ -55,6 +60,7 @@ import {
   ShopifyProductRecommendationsOperation,
   ShopifyProductsOperation,
   ShopifyRemoveFromCartOperation,
+  ShopifyShopCarouselOperation,
   ShopifyUpdateCartOperation,
 } from "./types";
 
@@ -500,6 +506,120 @@ export async function getProducts({
   });
 
   return reshapeProducts(removeEdgesAndNodes(res.body.data.products));
+}
+
+export async function getShopCarouselMetafield(
+  namespace: string = "custom",
+  key: string = "carousel"
+): Promise<{ value: string; type: string } | null> {
+  if (!endpoint) {
+    console.log("Skipping getShopCarouselMetafield - Shopify not configured");
+    return null;
+  }
+
+  const res = await shopifyFetch<ShopifyShopCarouselOperation>({
+    query: getShopCarouselMetafieldQuery,
+    variables: { namespace, key },
+  });
+
+  const metafield = res.body.data.shop.metafield;
+  return metafield ? { value: metafield.value, type: metafield.type } : null;
+}
+
+export async function getShopCollectionsMetafield(
+  namespace: string = "custom",
+  key: string = "collections"
+): Promise<{ value: string; type: string } | null> {
+  if (!endpoint) {
+    console.log(
+      "Skipping getShopCollectionsMetafield - Shopify not configured"
+    );
+    return null;
+  }
+
+  const res = await shopifyFetch<ShopifyShopCarouselOperation>({
+    query: getShopCarouselMetafieldQuery,
+    variables: { namespace, key },
+  });
+
+  const metafield = res.body.data.shop.metafield;
+  return metafield ? { value: metafield.value, type: metafield.type } : null;
+}
+
+export type HomePageCollection = {
+  collection: Collection;
+  products: Product[];
+};
+
+export async function getShopCollectionsForHomePage(
+  namespace: string = "custom",
+  key: string = "collections"
+): Promise<HomePageCollection[]> {
+  "use cache";
+  cacheTag(TAGS.collections, TAGS.products);
+  cacheLife("days");
+
+  if (!endpoint) return [];
+
+  const metafield = await getShopCollectionsMetafield(namespace, key);
+  if (!metafield?.value) return [];
+
+  let handles: string[];
+  try {
+    handles = JSON.parse(metafield.value) as string[];
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(handles) || handles.length === 0) return [];
+
+  const result: HomePageCollection[] = [];
+  for (const handle of handles) {
+    const collection = await getCollection(handle);
+    if (!collection) continue;
+    const products = await getCollectionProducts({ collection: handle });
+    result.push({ collection, products });
+  }
+  return result;
+}
+
+export type CarouselImage = { url: string; alt: string };
+
+export async function getShopCarouselImages(
+  namespace: string = "custom",
+  key: string = "carousel"
+): Promise<CarouselImage[]> {
+  "use cache";
+  cacheTag(TAGS.collections);
+  cacheLife("days");
+
+  if (!endpoint) return [];
+
+  const metafield = await getShopCarouselMetafield(namespace, key);
+  if (!metafield?.value) return [];
+
+  let ids: string[];
+  try {
+    ids = JSON.parse(metafield.value) as string[];
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const res = await shopifyFetch<ShopifyNodesOperation>({
+    query: getMediaNodesQuery,
+    variables: { ids },
+  });
+
+  const images: CarouselImage[] = [];
+  for (const node of res.body.data.nodes) {
+    if (node && "image" in node && node.image?.url) {
+      images.push({
+        url: node.image.url,
+        alt: node.image.altText ?? node.alt ?? "Carousel image",
+      });
+    }
+  }
+  return images;
 }
 
 // This is called from `app/api/revalidate.ts` so providers can control revalidation logic.

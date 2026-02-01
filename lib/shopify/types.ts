@@ -270,3 +270,39 @@ export type ShopifyProductsOperation = {
     sortKey?: string;
   };
 };
+
+export type ShopifyShopCarouselOperation = {
+  data: {
+    shop: {
+      metafield: {
+        id: string;
+        namespace: string;
+        key: string;
+        value: string;
+        type: string;
+      } | null;
+    };
+  };
+  variables: {
+    namespace: string;
+    key: string;
+  };
+};
+
+export type ShopifyNodesOperation = {
+  data: {
+    nodes: Array<{
+      id: string;
+      alt?: string | null;
+      image?: {
+        url: string;
+        altText: string | null;
+        width: number;
+        height: number;
+      } | null;
+    } | null>;
+  };
+  variables: {
+    ids: string[];
+  };
+};
