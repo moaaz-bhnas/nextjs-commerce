@@ -28,7 +28,9 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
     if (!emblaApi) return;
     onSelect();
     emblaApi.on("select", onSelect);
-    return () => emblaApi.off("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
   }, [emblaApi, onSelect]);
 
   if (!images.length) return null;
