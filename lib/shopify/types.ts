@@ -47,6 +47,20 @@ export type Image = {
   height: number;
 };
 
+export type Customer = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
+export type CustomerUserError = {
+  code?: string;
+  field?: string[];
+  message: string;
+};
+
 export type Menu = {
   title: string;
   path: string;
@@ -304,5 +318,86 @@ export type ShopifyNodesOperation = {
   };
   variables: {
     ids: string[];
+  };
+};
+
+export type ShopifyCustomer = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
+export type ShopifyCustomerOperation = {
+  data: {
+    customer: ShopifyCustomer | null;
+  };
+  variables: {
+    customerAccessToken: string;
+  };
+};
+
+export type ShopifyCustomerCreateOperation = {
+  data: {
+    customerCreate: {
+      customer: { id: string } | null;
+      customerUserErrors: CustomerUserError[];
+    };
+  };
+  variables: {
+    input: { email: string; password: string };
+  };
+};
+
+export type ShopifyCustomerActivateByUrlOperation = {
+  data: {
+    customerActivateByUrl: {
+      customer: { id: string } | null;
+      customerUserErrors: CustomerUserError[];
+    };
+  };
+  variables: {
+    activationUrl: string;
+    password: string;
+  };
+};
+
+export type ShopifyCustomerAccessTokenCreateOperation = {
+  data: {
+    customerAccessTokenCreate: {
+      customerAccessToken: {
+        accessToken: string;
+        expiresAt: string;
+      } | null;
+      customerUserErrors: CustomerUserError[];
+    };
+  };
+  variables: {
+    input: { email: string; password: string };
+  };
+};
+
+export type ShopifyCustomerRecoverOperation = {
+  data: {
+    customerRecover: {
+      customerUserErrors: CustomerUserError[];
+    };
+  };
+  variables: {
+    email: string;
+  };
+};
+
+export type ShopifyCustomerResetByUrlOperation = {
+  data: {
+    customerResetByUrl: {
+      customer: { id: string } | null;
+      customerUserErrors: CustomerUserError[];
+    };
+  };
+  variables: {
+    resetUrl: string;
+    password: string;
   };
 };

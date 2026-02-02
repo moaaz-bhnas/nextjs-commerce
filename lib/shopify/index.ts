@@ -18,12 +18,20 @@ import {
   editCartItemsMutation,
   removeFromCartMutation,
 } from "./mutations/cart";
+import {
+  customerAccessTokenCreateMutation,
+  customerActivateByUrlMutation,
+  customerCreateMutation,
+  customerRecoverMutation,
+  customerResetByUrlMutation,
+} from "./mutations/customer";
 import { getCartQuery } from "./queries/cart";
 import {
   getCollectionProductsQuery,
   getCollectionQuery,
   getCollectionsQuery,
 } from "./queries/collection";
+import { getCustomerQuery } from "./queries/customer";
 import { getMenuQuery } from "./queries/menu";
 import { getPageQuery, getPagesQuery } from "./queries/page";
 import {
@@ -39,6 +47,7 @@ import {
   Cart,
   Collection,
   Connection,
+  Customer,
   Image,
   Menu,
   Page,
@@ -51,6 +60,12 @@ import {
   ShopifyCollectionProductsOperation,
   ShopifyCollectionsOperation,
   ShopifyCreateCartOperation,
+  ShopifyCustomerAccessTokenCreateOperation,
+  ShopifyCustomerActivateByUrlOperation,
+  ShopifyCustomerCreateOperation,
+  ShopifyCustomerOperation,
+  ShopifyCustomerRecoverOperation,
+  ShopifyCustomerResetByUrlOperation,
   ShopifyMenuOperation,
   ShopifyNodesOperation,
   ShopifyPageOperation,
@@ -272,6 +287,136 @@ export async function updateCart(
 
   return reshapeCart(res.body.data.cartLinesUpdate.cart);
 }
+
+const CUSTOMER_ACCESS_TOKEN_COOKIE = "customerAccessToken";
+
+export type CustomerCreateResult = {
+  customerId: string | null;
+  customerUserErrors: { code?: string; field?: string[]; message: string }[];
+};
+
+export async function customerCreate(input: {
+  email: string;
+  password: string;
+}): Promise<CustomerCreateResult> {
+  const res = await shopifyFetch<ShopifyCustomerCreateOperation>({
+    query: customerCreateMutation,
+    variables: { input },
+  });
+  console.log("✨✨ customerCreate", res.body.data.customerCreate);
+  const { customer, customerUserErrors } = res.body.data.customerCreate;
+  return {
+    customerId: customer?.id ?? null,
+    customerUserErrors: customerUserErrors ?? [],
+  };
+}
+
+export type CustomerActivateByUrlResult = {
+  customerId: string | null;
+  customerUserErrors: { code?: string; field?: string[]; message: string }[];
+};
+
+export async function customerActivateByUrl(
+  activationUrl: string,
+  password: string
+): Promise<CustomerActivateByUrlResult> {
+  const res = await shopifyFetch<ShopifyCustomerActivateByUrlOperation>({
+    query: customerActivateByUrlMutation,
+    variables: { activationUrl, password },
+  });
+  const { customer, customerUserErrors } = res.body.data.customerActivateByUrl;
+  return {
+    customerId: customer?.id ?? null,
+    customerUserErrors: customerUserErrors ?? [],
+  };
+}
+
+export type CustomerAccessTokenResult = {
+  accessToken: string;
+  expiresAt: string;
+} | null;
+
+export async function customerAccessTokenCreate(input: {
+  email: string;
+  password: string;
+}): Promise<{
+  customerAccessToken: CustomerAccessTokenResult;
+  customerUserErrors: { code?: string; field?: string[]; message: string }[];
+}> {
+  const res = await shopifyFetch<ShopifyCustomerAccessTokenCreateOperation>({
+    query: customerAccessTokenCreateMutation,
+    variables: { input },
+  });
+  const { customerAccessToken, customerUserErrors } =
+    res.body.data.customerAccessTokenCreate;
+  return {
+    customerAccessToken: customerAccessToken ?? null,
+    customerUserErrors: customerUserErrors ?? [],
+  };
+}
+
+export async function customerRecover(email: string): Promise<{
+  customerUserErrors: { code?: string; field?: string[]; message: string }[];
+}> {
+  const res = await shopifyFetch<ShopifyCustomerRecoverOperation>({
+    query: customerRecoverMutation,
+    variables: { email },
+  });
+  const { customerUserErrors } = res.body.data.customerRecover;
+  return { customerUserErrors: customerUserErrors ?? [] };
+}
+
+export type CustomerResetByUrlResult = {
+  customerId: string | null;
+  customerUserErrors: { code?: string; field?: string[]; message: string }[];
+};
+
+export async function customerResetByUrl(
+  resetUrl: string,
+  password: string
+): Promise<CustomerResetByUrlResult> {
+  const res = await shopifyFetch<ShopifyCustomerResetByUrlOperation>({
+    query: customerResetByUrlMutation,
+    variables: { resetUrl, password },
+  });
+  const { customer, customerUserErrors } = res.body.data.customerResetByUrl;
+  return {
+    customerId: customer?.id ?? null,
+    customerUserErrors: customerUserErrors ?? [],
+  };
+}
+
+export async function getCustomer(): Promise<Customer | undefined> {
+  const customerAccessToken = (await cookies()).get(
+    CUSTOMER_ACCESS_TOKEN_COOKIE
+  )?.value;
+
+  if (!customerAccessToken) {
+    return undefined;
+  }
+
+  try {
+    const res = await shopifyFetch<ShopifyCustomerOperation>({
+      query: getCustomerQuery,
+      variables: { customerAccessToken },
+    });
+    const customer = res.body.data.customer;
+    if (!customer) {
+      return undefined;
+    }
+    return {
+      id: customer.id,
+      firstName: customer.firstName ?? null,
+      lastName: customer.lastName ?? null,
+      email: customer.email ?? null,
+      phone: customer.phone ?? null,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export { CUSTOMER_ACCESS_TOKEN_COOKIE };
 
 export async function getCart(): Promise<Cart | undefined> {
   "use cache: private";

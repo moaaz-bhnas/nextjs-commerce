@@ -1,6 +1,6 @@
 import CartModal from "components/cart/modal";
 import LogoSquare from "components/logo-square";
-import { getMenu } from "lib/shopify";
+import { getCustomer, getMenu } from "lib/shopify";
 import { Menu } from "lib/shopify/types";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -10,7 +10,10 @@ import Search, { SearchSkeleton } from "./search";
 const { SITE_NAME } = process.env;
 
 export async function Navbar() {
-  const menu = await getMenu("next-js-frontend-header-menu");
+  const [menu, customer] = await Promise.all([
+    getMenu("next-js-frontend-header-menu"),
+    getCustomer(),
+  ]);
 
   return (
     <nav className="relative flex items-center justify-between p-4 lg:px-6">
@@ -52,7 +55,24 @@ export async function Navbar() {
             <Search />
           </Suspense>
         </div>
-        <div className="flex justify-end md:w-1/3">
+        <div className="flex items-center justify-end gap-4 md:w-1/3">
+          {customer ? (
+            <Link
+              href="/account"
+              prefetch={true}
+              className="text-sm text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300"
+            >
+              {customer.firstName ? customer.firstName : "Account"}
+            </Link>
+          ) : (
+            <Link
+              href="/account/login"
+              prefetch={true}
+              className="text-sm text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300"
+            >
+              Sign in
+            </Link>
+          )}
           <CartModal />
         </div>
       </div>
