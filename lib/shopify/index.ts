@@ -463,10 +463,12 @@ export async function getCollectionProducts({
   collection,
   reverse,
   sortKey,
+  limit,
 }: {
   collection: string;
   reverse?: boolean;
   sortKey?: string;
+  limit?: number;
 }): Promise<Product[]> {
   "use cache";
   cacheTag(TAGS.collections, TAGS.products);
@@ -485,6 +487,7 @@ export async function getCollectionProducts({
       handle: collection,
       reverse,
       sortKey: sortKey === "CREATED_AT" ? "CREATED" : sortKey,
+      first: limit ?? 100,
     },
   });
 
@@ -721,7 +724,10 @@ export async function getShopCollectionsForHomePage(
   for (const handle of handles) {
     const collection = await getCollection(handle);
     if (!collection) continue;
-    const products = await getCollectionProducts({ collection: handle });
+    const products = await getCollectionProducts({
+      collection: handle,
+      limit: 8,
+    });
     result.push({ collection, products });
   }
   return result;
